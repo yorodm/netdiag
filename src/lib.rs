@@ -22,6 +22,7 @@ fn nlmsg_length(len: usize) -> usize {
 
 #[derive(Debug)]
 pub enum DiagError {
+	NoMessagesError,
     NetLinkError(i32),
     OsError,
     ABIError,
@@ -106,7 +107,7 @@ impl NetDiag {
     }
 
     fn get_messages(&mut self) -> Result<()> {
-		send_diagmsg(self.fd, self.kind.family(), self.kind.proto());
+		send_diagmsg(self.fd, self.kind.family(), self.kind.proto())?;
         let page_size = std::cmp::min(unsafe { libc::sysconf(libc::_SC_PAGE_SIZE) as usize }, 8192);
         let mut buffer = Vec::<u32>::with_capacity(page_size);
         let buff_size = buffer.capacity();
@@ -151,18 +152,11 @@ impl NetDiag {
         Ok(())
     }
 
-    pub fn recv(&mut self) -> Option<SockInfo> {
+    pub fn recv(&mut self) -> Result<SockInfo> {
         if self.queue.is_empty() {
-            match self.get_messages() {
-                Ok(_) => self.queue.pop_front(),
-                Err(x) => {
-                    dbg!(x);
-                    None
-                }
-            }
-        } else {
-            self.queue.pop_front()
-        }
+            self.get_messages()?;
+		}
+        self.queue.pop_front().ok_or(DiagError::NoMessagesError)
     }
 }
 
