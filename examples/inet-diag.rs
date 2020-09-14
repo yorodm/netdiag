@@ -5,8 +5,10 @@ fn main() {
     println!("{:?}", nd);
     loop {
         match nd.recv() {
-            None => {}
-            Some(x) => println!("{:?}", x),
+            Err(x) => {
+				println!("Error {:?}", x)
+			}
+            Ok(x) => println!("{:?}", x),
         }
     }
 }
